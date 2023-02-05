@@ -396,6 +396,16 @@ byte Minitel::standardTeletel() {  // Voir p.144
 }
 /*--------------------------------------------------------------------*/
 
+void Minitel::jeuFrancais() {
+  writeByte(SO);  // (voir p.144)
+}
+/*--------------------------------------------------------------------*/
+
+void Minitel::jeuAmericain() {
+  writeByte(SI);  // (voir p.144)
+}
+/*--------------------------------------------------------------------*/
+
 void Minitel::attributs(byte attribut) {
   writeByte(ESC);  // Accès à la grille C1 (voir p.92)
   writeByte(attribut);
