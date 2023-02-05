@@ -396,13 +396,13 @@ byte Minitel::standardTeletel() {  // Voir p.144
 }
 /*--------------------------------------------------------------------*/
 
-void Minitel::jeuFrancais() {
-  writeByte(SO);  // (voir p.144)
+void Minitel::jeuFrancais() {  // Voir p.144
+  writeByte(SO);
 }
 /*--------------------------------------------------------------------*/
 
-void Minitel::jeuAmericain() {
-  writeByte(SI);  // (voir p.144)
+void Minitel::jeuAmericain() {  // Voir p.144
+  writeByte(SI);
 }
 /*--------------------------------------------------------------------*/
 
