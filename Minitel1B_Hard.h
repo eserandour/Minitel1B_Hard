@@ -327,8 +327,8 @@ public:
   // Standards
   byte standardTeleinformatique();  // Standard Télétel => Standard Téléinformatique 80 colonnes (Possibilités de programmation moins étendues)
   byte standardTeletel();           // Standard Téléinformatique => Standard Télétel (inclut les modes Vidéotex et Mixte)
-  void jeuFrancais();               // Passage au jeu G1 (Standard Téléinformatique et mode Mixte du Standard Télétel)
-  void jeuAmericain();              // Passage au jeu G0 (Standard Téléinformatique et mode Mixte du Standard Télétel)
+  void jeuFrancais();               // Passage au jeu français (Standard Téléinformatique et mode Mixte du Standard Télétel)
+  void jeuAmericain();              // Passage au jeu américain (Standard Téléinformatique et mode Mixte du Standard Télétel)
 
   // Contenu
   void attributs(byte attribut);
