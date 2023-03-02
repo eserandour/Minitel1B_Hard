@@ -97,7 +97,11 @@ void correction(int nbLignes) {
     minitel.print(VIDE);
     minitel.attributs(CARACTERE_BLANC);
     minitel.moveCursorLeft(1);
-    texte = texte.substring(0,texte.length()-1);
+    unsigned int index = texte.length()-1;
+    if (texte.charAt(index) >> 7) { // caractère spécial
+      while ((texte.charAt(index) >> 6) != 0b11) index--;
+    }
+    texte.remove(index);
     nbCaracteres--;
   }
 }
