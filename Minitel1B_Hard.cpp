@@ -693,7 +693,7 @@ int Minitel::getNbBytes(unsigned long code) {
 /*--------------------------------------------------------------------*/
 
 void Minitel::graphic(byte b, int x, int y) {
-  moveCursorXY(x,y);
+  newXY(x,y);
   graphic(b);
 }
 /*--------------------------------------------------------------------*/
@@ -737,7 +737,7 @@ void Minitel::rect(int x1, int y1, int x2, int y2) {
 
 void Minitel::hLine(int x1, int y, int x2, int position) {
   textMode();
-  moveCursorXY(x1,y);
+  newXY(x1,y);
   switch (position) {
     case TOP    : writeByte(0x7E); break;
     case CENTER : writeByte(0x60); break;
@@ -750,8 +750,8 @@ void Minitel::hLine(int x1, int y, int x2, int position) {
 void Minitel::vLine(int x, int y1, int y2, int position, int sens) {
   textMode();
   switch (sens) {
-    case DOWN : moveCursorXY(x,y1); break;
-    case UP   : moveCursorXY(x,y2); break;
+    case DOWN : newXY(x,y1); break;
+    case UP   : newXY(x,y2); break;
   }
   for (int i=0; i<y2-y1; i++) {
     switch (position) {
