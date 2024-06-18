@@ -559,7 +559,7 @@ void Minitel::println(String chaine) {
 /*--------------------------------------------------------------------*/
 
 void Minitel::println() {
-	moveCursorReturn(1);
+  moveCursorReturn(1);
   if (currentSize == DOUBLE_HAUTEUR || currentSize == DOUBLE_GRANDEUR) {
     moveCursorReturn(1);
   }
