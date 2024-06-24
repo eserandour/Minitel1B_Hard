@@ -268,6 +268,10 @@ class Minitel
 public:
   Minitel(HardwareSerial& serial);
   
+  #if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
+  Minitel(HardwareSerial& serial, int8_t rxPin, int8_t txPin);
+  #endif
+  
   // Ecrire un octet, un mot ou un code de 4 octets maximum / Lire un octet
   void writeByte(byte b);
   void writeWord(word w);
