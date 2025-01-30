@@ -1,30 +1,30 @@
 ////////////////////////////////////////////////////////////////////////
 /*
-   Minitel1B_Hard - Fichier d'en-tête - Version du 5 mars 2023 à 21h27
-   Copyright 2016-2023 - Eric Sérandour
-   https://entropie.org/3615/
-   
-   Remerciements à :
-   BorisFR, iodeo
-   
-   Documentation utilisée :
-   Spécifications Techniques d'Utilisation du Minitel 1B
-   http://543210.free.fr/TV/stum1b.pdf
-   
+	 Minitel1B_Hard - Fichier d'en-tête - Version du 5 mars 2023 à 21h27
+	 Copyright 2016-2023 - Eric Sérandour
+	 https://entropie.org/3615/
+	 
+	 Remerciements à :
+	 BorisFR, iodeo
+	 
+	 Documentation utilisée :
+	 Spécifications Techniques d'Utilisation du Minitel 1B
+	 http://543210.free.fr/TV/stum1b.pdf
+	 
 ////////////////////////////////////////////////////////////////////////
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
+	 
+	 This program is free software: you can redistribute it and/or modify
+	 it under the terms of the GNU General Public License as published by
+	 the Free Software Foundation, either version 3 of the License, or
+	 (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+	 This program is distributed in the hope that it will be useful,
+	 but WITHOUT ANY WARRANTY; without even the implied warranty of
+	 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	 GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program. If not, see <http://www.gnu.org/licenses/>.
+	 You should have received a copy of the GNU General Public License
+	 along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 ////////////////////////////////////////////////////////////////////////
 
@@ -192,8 +192,6 @@
 #define EFFACEMENT_PAGE            0x1B5B324A
 
 
-
-
 // Chapitre 6 : Le Protocole (voir p.134)
 
 // 1 Généralités (voir p.134)
@@ -246,9 +244,6 @@
 // 13.2 Sur réception d'une commande de reset
 #define RESET                      0x7F
 
-
-
-
 // Constantes personnelles pour hline et vline
 #define CENTER  0
 #define TOP     1
@@ -259,138 +254,157 @@
 #define DOWN    6
 
 
-
-
-////////////////////////////////////////////////////////////////////////
-
 class Minitel
 {
 public:
-  Minitel(HardwareSerial& serial);
-  
-  // Ecrire un octet, un mot ou un code de 4 octets maximum / Lire un octet
-  void writeByte(byte b);
-  void writeWord(word w);
-  void writeCode(unsigned long code);  // 4 octets maximum
-  byte readByte();
-  
-  // Identification du type de Minitel
-  unsigned long identifyDevice();
-  
-  // Vitesse de la liaison série
-  // A la mise sous tension du Minitel, la vitesse des échanges entre
-  // le Minitel et le périphérique est de 1200 bauds par défaut.
-  // L'usager du Minitel peut programmer au clavier la vitesse des
-  // échanges avec le périphérique quel que soit l'état du terminal
-  // grâce aux commandes suivantes :
-  // Fnct P + 3 : 300 bauds
-  // Fnct P + 1 : 1200 bauds
-  // Fnct P + 4 : 4800 bauds
-  // Fnct P + 9 : 9600 bauds (pour le Minitel 2 seulement)
-  // Attention ! Si le Minitel et le périphérique ne communiquent pas
-  // à la même vitesse, on perd la liaison.
-  int changeSpeed(int bauds);  // A tout moment, un périphérique peut modifier les vitesses d'échange de la prise (vitesses possibles : 300, 1200, 4800 bauds ; également 9600 bauds pour le Minitel 2).
-  int currentSpeed();  // Pour connaitre la vitesse d'échange en cours, le Minitel et le périphérique échangeant à la même vitesse.
-  int searchSpeed();  // Pour connaitre la vitesse du Minitel, le Minitel et le périphérique n'échangeant pas nécessairement à la même vitesse.
-  
-  // Séparateurs
-  void newScreen();  // Attention ! newScreen réinitialise les attributs de visualisation.
-  void newXY(int x, int y);  // Attention ! newXY réinitialise les attributs de visualisation.
-  
-  // Curseur
-  void cursor();  // Curseur visible
-  void noCursor();  // Curseur invisible
-  void moveCursorXY(int x, int y);  // Adressage direct du curseur en colonne x et rangée y.
-  void moveCursorLeft(int n);  // Curseur vers la gauche de n colonnes. Arrêt au bord gauche de l'écran.
-  void moveCursorRight(int n);  // Curseur vers la droite de n colonnes. Arrêt au bord droit de l'écran.
-  void moveCursorDown(int n);  // Curseur vers le bas de n rangées. Arrêt en bas de l'écran.
-  void moveCursorUp(int n);  // Curseur vers le haut de n rangées. Arrêt en haut de l'écran.
-  void moveCursorReturn(int n);  // Retour du curseur au début de la rangée courante puis curseur vers le bas de n rangées. Arrêt en bas de l'écran.
-  int getCursorX();  // Colonne où se trouve le curseur
-  int getCursorY();  // Rangée où se trouve le curseur
-  
-  // Effacements, Suppressions, Insertions
-  void cancel();  // Remplissage à partir de la position courante du curseur et jusqu'à la fin de la rangée par des espaces du jeu courant ayant l'état courant des attributs. Le position courante du curseur n'est pas déplacée.
-  void clearScreenFromCursor();  // Effacement depuis le curseur inclus jusqu'à la fin de l'écran.
-  void clearScreenToCursor();  // Effacement depuis le début de l'écran jusqu'au curseur inclus.
-  void clearScreen();  // Effacement de tout l'écran (la position du curseur n'est pas modifiée).
-  void clearLineFromCursor();  // Effacement depuis le curseur inclus jusqu'à la fin de la rangée.
-  void clearLineToCursor();  // Effacement depuis le début de la rangée jusqu'au curseur inclus.
-  void clearLine();  // Effacement total de la rangée où est le curseur.
-  void deleteChars(int n);  // Suppression de n caractères en commençant à la position curseur incluse.
-  void insertChars(int n);  // Insertion de n caractères en commençant à la position curseur incluse (modèle RTIC uniquement, pas le MATRA ou le TELIC).
-  void startInsert();  // Début du mode insertion de caractères.
-  void stopInsert();  // Fin du mode insertion de caractères.
-  void deleteLines(int n);  // Suppression de n rangées à partir de celle où est le curseur.
-  void insertLines(int n);  // Insertion de n rangées à partir de celle où est le curseur.
-  
-  // Modes du standard Télétel
-  void textMode();      // Accès au jeu G0 - Mode Vidéotex 40 colonnes (par défaut à la mise sous tension du Minitel)
-  void graphicMode();   // Accès au jeu G1 - Mode Vidéotex 40 colonnes
-  byte pageMode();      // Mode page
-  byte scrollMode();    // Mode rouleau
-  byte modeMixte();     // Mode Vidéotex => Mode Mixte 80 colonnes (Aucun caractère semi-graphique (jeu G1) n'est visualisable)
-  byte modeVideotex();  // Mode Mixte => Mode Vidéotex 40 colonnes
 
-  // Standards
-  byte standardTeleinformatique();  // Standard Télétel => Standard Téléinformatique 80 colonnes (Possibilités de programmation moins étendues)
-  byte standardTeletel();           // Standard Téléinformatique => Standard Télétel (inclut les modes Vidéotex et Mixte)
+#if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
 
-  // Contenu
-  void attributs(byte attribut);
-  void print(String chaine);  // UTF-8 => Codes Minitel
-  void println(String chaine);
-  void println();
-  void printChar(char caractere);  // Caractère du jeu G0 exceptés ceux codés 0x60, 0x7E, 0x7F.
-  // void printDiacriticChar(unsigned char caractere);  // Caractère avec accent, tréma ou cédille.  // Obsolète depuis le 26/02/2023
-  void printSpecialChar(byte b);  // Caractère du jeu G2. Voir plus haut, au niveau de 1.2.3, les constantes possibles.
-  byte getCharByte(char caractere);
-  String getString(unsigned long code);  // Unicode => UTF-8
-  int getNbBytes(unsigned long code);  // À utiliser en association avec getString(unsigned long code) juste ci-dessus.
-  void graphic(byte b, int x, int y);  // Jeu G1. Voir page 101. Sous la forme 0b000000 à 0b111111 en allant du coin supérieur gauche au coin inférieur droit. En colonne x et rangée y.
-  void graphic(byte b);  // Voir la ligne ci-dessus.
-  void repeat(int n);  // Permet de répéter le dernier caractère visualisé avec les attributs courants de la position active d'écriture.
-  void bip();  // Bip sonore
-  
-  // Géométrie
-  void rect(int x1, int y1, int x2, int y2);  // Rectangle défini par 2 points.
-  void hLine(int x1, int y, int x2, int position);  // Ligne horizontale. position = TOP, CENTER ou BOTTOM.
-  void vLine(int x, int y1, int y2, int position, int sens);  // Ligne verticale. position = LEFT, CENTER ou RIGHT. sens = DOWN ou UP.
-  
-  // Clavier
-  unsigned long getKeyCode(bool unicode = true);  // Codes Minitel => Unicode par défaut (si false : pas de conversion)
-  byte smallMode();  // Mode minuscules du clavier
-  byte capitalMode();  // Mode majuscules du clavier
-  byte extendedKeyboard();  // Clavier étendu
-  byte standardKeyboard();  // Clavier standard
-  byte echo(boolean commande);  // Active ou désactive l'écho à l'écran de ce qui est tapé au clavier
-  
-  // Protocole
-  byte aiguillage(boolean commande, byte emetteur, byte recepteur);
-  byte statusAiguillage(byte module);
-  byte connexion(boolean commande);
-  byte reset();
-  
-private: 
-  HardwareSerial& mySerial; 
-  
-  byte currentSize = GRANDEUR_NORMALE;
-  boolean isValidChar(byte index);
-  // boolean isDiacritic(unsigned char caractere);  // Obsolète depuis le 26/02/2023
-  boolean isVisualisable(unsigned long code);
-  void writeBytesP(int n);  // Pn, Pr, Pc
-  
-  // Protocole
-  void writeBytesPRO(int n);  // PRO1, PRO2 ou PRO3
-  unsigned long identificationBytes();
-  int workingSpeed();
-  byte workingStandard(unsigned long sequence);
-  byte workingMode();
-  byte workingKeyboard();
-  byte workingAiguillage(byte module);
-  byte workingModem();
-  
-  unsigned long getCursorXY();
+	Minitel(HardwareSerial& serial);
+	Minitel(HardwareSerial& serial, uint8_t, uint8_t);
+
+#elif defined(ARDUINO_ARCH_RP2040)
+	// RP2040 overloads the HardwareSerial class, which is onlu used for Serial (i.e. USB)
+	// Both UART use the SerialUART class.
+	Minitel(SerialUART& serial);
+	Minitel(SerialUART& serial, uint8_t, uint8_t);	
+
+#else
+
+	Minitel(HardwareSerial& serial);
+
+#endif
+	
+	// Ecrire un octet, un mot ou un code de 4 octets maximum / Lire un octet
+	void writeByte(byte b);
+	void writeWord(word w);
+	void writeCode(unsigned long code);  // 4 octets maximum
+	byte readByte();
+	
+	// Identification du type de Minitel
+	unsigned long identifyDevice();
+	
+	// Vitesse de la liaison série
+	// A la mise sous tension du Minitel, la vitesse des échanges entre
+	// le Minitel et le périphérique est de 1200 bauds par défaut.
+	// L'usager du Minitel peut programmer au clavier la vitesse des
+	// échanges avec le périphérique quel que soit l'état du terminal
+	// grâce aux commandes suivantes :
+	// Fnct P + 3 : 300 bauds
+	// Fnct P + 1 : 1200 bauds
+	// Fnct P + 4 : 4800 bauds
+	// Fnct P + 9 : 9600 bauds (pour le Minitel 2 seulement)
+	// Attention ! Si le Minitel et le périphérique ne communiquent pas
+	// à la même vitesse, on perd la liaison.
+	int changeSpeed(int bauds);  // A tout moment, un périphérique peut modifier les vitesses d'échange de la prise (vitesses possibles : 300, 1200, 4800 bauds ; également 9600 bauds pour le Minitel 2).
+	int currentSpeed();  // Pour connaitre la vitesse d'échange en cours, le Minitel et le périphérique échangeant à la même vitesse.
+	int searchSpeed();  // Pour connaitre la vitesse du Minitel, le Minitel et le périphérique n'échangeant pas nécessairement à la même vitesse.
+	
+	// Séparateurs
+	void newScreen();  // Attention ! newScreen réinitialise les attributs de visualisation.
+	void newXY(int x, int y);  // Attention ! newXY réinitialise les attributs de visualisation.
+	
+	// Curseur
+	void cursor();  // Curseur visible
+	void noCursor();  // Curseur invisible
+	void moveCursorXY(int x, int y);  // Adressage direct du curseur en colonne x et rangée y.
+	void moveCursorLeft(int n);  // Curseur vers la gauche de n colonnes. Arrêt au bord gauche de l'écran.
+	void moveCursorRight(int n);  // Curseur vers la droite de n colonnes. Arrêt au bord droit de l'écran.
+	void moveCursorDown(int n);  // Curseur vers le bas de n rangées. Arrêt en bas de l'écran.
+	void moveCursorUp(int n);  // Curseur vers le haut de n rangées. Arrêt en haut de l'écran.
+	void moveCursorReturn(int n);  // Retour du curseur au début de la rangée courante puis curseur vers le bas de n rangées. Arrêt en bas de l'écran.
+	int getCursorX();  // Colonne où se trouve le curseur
+	int getCursorY();  // Rangée où se trouve le curseur
+	
+	// Effacements, Suppressions, Insertions
+	void cancel();  // Remplissage à partir de la position courante du curseur et jusqu'à la fin de la rangée par des espaces du jeu courant ayant l'état courant des attributs. Le position courante du curseur n'est pas déplacée.
+	void clearScreenFromCursor();  // Effacement depuis le curseur inclus jusqu'à la fin de l'écran.
+	void clearScreenToCursor();  // Effacement depuis le début de l'écran jusqu'au curseur inclus.
+	void clearScreen();  // Effacement de tout l'écran (la position du curseur n'est pas modifiée).
+	void clearLineFromCursor();  // Effacement depuis le curseur inclus jusqu'à la fin de la rangée.
+	void clearLineToCursor();  // Effacement depuis le début de la rangée jusqu'au curseur inclus.
+	void clearLine();  // Effacement total de la rangée où est le curseur.
+	void deleteChars(int n);  // Suppression de n caractères en commençant à la position curseur incluse.
+	void insertChars(int n);  // Insertion de n caractères en commençant à la position curseur incluse (modèle RTIC uniquement, pas le MATRA ou le TELIC).
+	void startInsert();  // Début du mode insertion de caractères.
+	void stopInsert();  // Fin du mode insertion de caractères.
+	void deleteLines(int n);  // Suppression de n rangées à partir de celle où est le curseur.
+	void insertLines(int n);  // Insertion de n rangées à partir de celle où est le curseur.
+	
+	// Modes du standard Télétel
+	void textMode();      // Accès au jeu G0 - Mode Vidéotex 40 colonnes (par défaut à la mise sous tension du Minitel)
+	void graphicMode();   // Accès au jeu G1 - Mode Vidéotex 40 colonnes
+	byte pageMode();      // Mode page
+	byte scrollMode();    // Mode rouleau
+	byte modeMixte();     // Mode Vidéotex => Mode Mixte 80 colonnes (Aucun caractère semi-graphique (jeu G1) n'est visualisable)
+	byte modeVideotex();  // Mode Mixte => Mode Vidéotex 40 colonnes
+
+	// Standards
+	byte standardTeleinformatique();  // Standard Télétel => Standard Téléinformatique 80 colonnes (Possibilités de programmation moins étendues)
+	byte standardTeletel();           // Standard Téléinformatique => Standard Télétel (inclut les modes Vidéotex et Mixte)
+
+	// Contenu
+	void attributs(byte attribut);
+	void print(String chaine);  // UTF-8 => Codes Minitel
+	void println(String chaine);
+	void println();
+	void printChar(char caractere);  // Caractère du jeu G0 exceptés ceux codés 0x60, 0x7E, 0x7F.
+	// void printDiacriticChar(unsigned char caractere);  // Caractère avec accent, tréma ou cédille.  // Obsolète depuis le 26/02/2023
+	void printSpecialChar(byte b);  // Caractère du jeu G2. Voir plus haut, au niveau de 1.2.3, les constantes possibles.
+	byte getCharByte(char caractere);
+	String getString(unsigned long code);  // Unicode => UTF-8
+	int getNbBytes(unsigned long code);  // À utiliser en association avec getString(unsigned long code) juste ci-dessus.
+	void graphic(byte b, int x, int y);  // Jeu G1. Voir page 101. Sous la forme 0b000000 à 0b111111 en allant du coin supérieur gauche au coin inférieur droit. En colonne x et rangée y.
+	void graphic(byte b);  // Voir la ligne ci-dessus.
+	void repeat(int n);  // Permet de répéter le dernier caractère visualisé avec les attributs courants de la position active d'écriture.
+	void bip();  // Bip sonore
+	
+	// Géométrie
+	void rect(int x1, int y1, int x2, int y2);  // Rectangle défini par 2 points.
+	void hLine(int x1, int y, int x2, int position);  // Ligne horizontale. position = TOP, CENTER ou BOTTOM.
+	void vLine(int x, int y1, int y2, int position, int sens);  // Ligne verticale. position = LEFT, CENTER ou RIGHT. sens = DOWN ou UP.
+	
+	// Clavier
+	unsigned long getKeyCode(bool unicode = true);  // Codes Minitel => Unicode par défaut (si false : pas de conversion)
+	byte smallMode();  // Mode minuscules du clavier
+	byte capitalMode();  // Mode majuscules du clavier
+	byte extendedKeyboard();  // Clavier étendu
+	byte standardKeyboard();  // Clavier standard
+	byte echo(boolean commande);  // Active ou désactive l'écho à l'écran de ce qui est tapé au clavier
+	
+	// Protocole
+	byte aiguillage(boolean commande, byte emetteur, byte recepteur);
+	byte statusAiguillage(byte module);
+	byte connexion(boolean commande);
+	byte reset();
+	
+private:
+#if defined(ARDUINO_ARCH_RP2040)
+	SerialUART& mySerial;
+#else
+	HardwareSerial& mySerial; 
+#endif
+
+	uint8_t rx_pin;
+	uint8_t tx_pin;
+	
+	byte currentSize = GRANDEUR_NORMALE;
+	boolean isValidChar(byte index);
+	// boolean isDiacritic(unsigned char caractere);  // Obsolète depuis le 26/02/2023
+	boolean isVisualisable(unsigned long code);
+	void writeBytesP(int n);  // Pn, Pr, Pc
+	
+	// Protocole
+	void writeBytesPRO(int n);  // PRO1, PRO2 ou PRO3
+	unsigned long identificationBytes();
+	int workingSpeed();
+	byte workingStandard(unsigned long sequence);
+	byte workingMode();
+	byte workingKeyboard();
+	byte workingAiguillage(byte module);
+	byte workingModem();
+	
+	unsigned long getCursorXY();
 };
 
 ////////////////////////////////////////////////////////////////////////
