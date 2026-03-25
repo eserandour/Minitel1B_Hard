@@ -14,10 +14,10 @@ Avec la carte Arduino Mega (ATmega 2560), j'utilise le <a href="https://entropie
 
 25/03/2026<br>
 Intégration des modifications proposées par iodeo + Mise à jour des exemples en tenant compte des modifications chez Espressif Systems (version 3.3.7 de esp32 testée) :<br>
-* Utilisation de la config SERIAL_7E1 de hardwareSerial (calcul de parité natif des noyaux arduino et esp32)<br>
+* <b>Utilisation de la config SERIAL_7E1 de hardwareSerial</b> (calcul de parité natif des noyaux arduino et esp32)<br>
 * On ne ferme pas la liaison série au moment de changer la vitesse pour l'esp32 car cela parasite l'acquittement dans certains cas. La fermeture reste nécessaire pour les arduinos (ajout macro #else)<br>
 * Renommage de la variable SPEED en _SPEED (conflit avec le noyau)<br>
-* Ajout d'un constructeur pour ESP32 permettant la relocalisation des broches à utiliser pour le port Série. Les paramètres rxPin et txPin sont relatifs à l'esp32 : rxPin va au tx du minitel et txPin va au rx du minitel<br>
+* <b>Ajout d'un constructeur pour ESP32 permettant la relocalisation des broches à utiliser pour le port Série</b>. Les paramètres rxPin et txPin sont relatifs à l'esp32 : rxPin va au tx du minitel et txPin va au rx du minitel<br>
 
 12/03/2023<br>
 <b>Correction de deux bugs mineurs</b> dans getKeyCode(bool unicode)<br>
