@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////
 /*
-   Minitel1B_Hard - Fichier source - Version du 12 mars 2023 à 04h55
-   Copyright 2016-2023 - Eric Sérandour
+   Minitel1B_Hard - Fichier source - Version du 25 mars 2026 à 21h32
+   Copyright 2016-2026 - Eric Sérandour
    https://entropie.org/3615/
    
    Remerciements à :
@@ -39,11 +39,25 @@
 Minitel::Minitel(HardwareSerial& serial) : mySerial(serial) {
   // A la mise sous tension du Minitel, la vitesse des échanges entre
   // le Minitel et le périphérique est de 1200 bauds par défaut.
-  mySerial.begin(1200);
+  mySerial.begin(1200, SERIAL_7E1);
 }
 /*--------------------------------------------------------------------*/
 
+#if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
+Minitel::Minitel(HardwareSerial& serial, int8_t rxPin, int8_t txPin) : mySerial(serial) {
+  // A la mise sous tension du Minitel, la vitesse des échanges entre
+  // le Minitel et le périphérique est de 1200 bauds par défaut.
+  mySerial.begin(1200, SERIAL_7E1, rxPin, txPin);
+}
+#endif
+
+/*--------------------------------------------------------------------*/
+
 void Minitel::writeByte(byte b) {
+  // Cette fonction servait à ajouter le bit de parité pour la communication avec le minitel
+  // Cela se fait désormais avec l'option SERIAL_7E1 de la fonction begin.
+  
+  /*
   // Le bit de parité est mis à 0 si la somme des autres bits est paire
   // et à 1 si elle est impaire.
   boolean parite = 0;
@@ -58,6 +72,8 @@ void Minitel::writeByte(byte b) {
   else {
     bitWrite(b,7,0);  // Ecriture du bit de parité
   }
+  */
+  
   mySerial.write(b);  // Envoi de l'octet sur le port série
 }
 /*--------------------------------------------------------------------*/
@@ -84,7 +100,12 @@ void Minitel::writeCode(unsigned long code) {
 /*--------------------------------------------------------------------*/
 
 byte Minitel::readByte() {
+  // Cette fonction servait à ajouter le bit de parité pour la communication avec le minitel
+  // Cela se fait désormais avec l'option SERIAL_7E1 de la fonction begin.	
+
   byte b = mySerial.read();
+
+  /*
   // Le bit de parité est à 0 si la somme des autres bits est paire
   // et à 1 si elle est impaire.
   boolean parite = 0;
@@ -102,6 +123,9 @@ byte Minitel::readByte() {
   else {
     return 0xFF;  // Pour indiquer une erreur de parité.
   }
+  */
+  
+  return b;
 }
 /*--------------------------------------------------------------------*/
 
@@ -150,10 +174,12 @@ int Minitel::changeSpeed(int bauds) {  // Voir p.141
     case 9600 : writeByte(0b1111111); break;  // 0x7F (pour le Minitel 2 seulement)
   }
   #if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
-  mySerial.flush(false); // Patch pour Arduino-ESP32 core v1.0.6 https://github.com/espressif/arduino-esp32
-  #endif
+  mySerial.flush(false); // Patch pour Arduino-ESP32 (still needed for v2.0.8) https://github.com/espressif/arduino-esp32
+  mySerial.updateBaudRate(bauds);
+  #else
   mySerial.end();
-  mySerial.begin(bauds);
+  mySerial.begin(bauds, SERIAL_7E1);
+  #endif
   // Acquittement
   return workingSpeed();  // En bauds (voir section Private ci-dessous)
 }
@@ -169,11 +195,11 @@ int Minitel::currentSpeed() {  // Voir p.141
 /*--------------------------------------------------------------------*/
 
 int Minitel::searchSpeed() {
-  const int SPEED[4] = { 1200, 4800, 300, 9600 };  // 9600 bauds pour le Minitel 2 seulement
+  const int _SPEED[4] = { 1200, 4800, 300, 9600 };  // 9600 bauds pour le Minitel 2 seulement
   int i = 0;
   int speed;
   do {
-    mySerial.begin(SPEED[i]);
+    mySerial.begin(_SPEED[i], SERIAL_7E1);
     if (i++ > 3) { i = 0; }
     speed = currentSpeed();
   } while (speed < 0);
@@ -1094,13 +1120,15 @@ void Minitel::writeBytesPRO(int n) {  // Voir p.134
 
 unsigned long Minitel::identificationBytes() {  // Voir p.138
   while (!mySerial);  // On attend que le port soit sur écoute.
+  unsigned long time = millis();
   unsigned long trame = 0;  // 32 bits = 4 octets
   while (trame >> 24 != 0x01) {  // La trame doit débuter par SOH (0x01)
     if (mySerial.available() > 0) {
       trame = (trame << 8) + readByte();
     }
+    if (millis() - time > 1000) return 0; // On se donne 1000 ms pour obtenir la réponse
   }
-  while (!mySerial.available()>0); // Indispensable
+  while (!mySerial.available() > 0); // Indispensable
   if (readByte() != 0x04) return 0;  // La trame doit se terminer par EOT (0x04)
   trame = (trame << 8) >> 8;  // On élimine l'octet SOH (0x01) de la trame
   return trame;  // 3 octets
