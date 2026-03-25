@@ -6,10 +6,19 @@ http://543210.free.fr/TV/stum1b.pdf
 
 <b>Historique</b> :
 
-<b>Dernière Version :</b> 17/03/2023 à 14h55.<br>
+<b>Dernière Version :</b> 25/03/2026 à 21h32.<br>
 J'utilise la version 1.8.19 d'Arduino pour compiler.<br>
 Je travaille avec un ATmega 1284P, un ATmega 2560 et un ESP32-WROOM-32E.<br>
+Pour la carte ESP32, j'utilise esp32 d'Espressif Systems (version 3.3.7) - URL de gestionnaire de cartes supplémentaires : https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 Avec la carte Arduino Mega (ATmega 2560), j'utilise le <a href="https://entropie.org/3615/index.php/hardware-2023/" target="_blank">shield 3615</a> (version 2023).
+
+25/03/2026<br>
+Intégration des modifications proposées par iodeo :<br>
+* Utilisation de la config SERIAL_7E1 de hardwareSerial (calcul de parité natif des noyaux arduino et esp32)<br>
+* On ne ferme pas la liaison série au moment de changer la vitesse pour l'esp32 car cela parasite l'acquittement dans certains cas. La fermeture reste nécessaire pour les arduinos (ajout macro #else)<br>
+* Renommage de la variable SPEED en _SPEED (conflit avec le noyau)<br>
+* Ajout d'un constructeur pour ESP32 permettant la relocalisation des broches à utiliser pour le port Série. Les paramètres rxPin et txPin sont relatifs à l'esp32 : rxPin va au tx du minitel et txPin va au rx du minitel<br>
+Mise à jour des exemples tenant compte des modifications chez Espressif Systems (version 3.3.7 de esp32 testée)<br>
 
 12/03/2023<br>
 <b>Correction de deux bugs mineurs</b> dans getKeyCode(bool unicode)<br>
