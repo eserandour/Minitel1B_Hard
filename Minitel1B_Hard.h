@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////
 /*
-   Minitel1B_Hard - Fichier d'en-tête - Version du 5 mars 2023 à 21h27
-   Copyright 2016-2023 - Eric Sérandour
+   Minitel1B_Hard - Fichier d'en-tête - Version du 25 mars 2026 à 21h32
+   Copyright 2016-2026 - Eric Sérandour
    https://entropie.org/3615/
    
    Remerciements à :
@@ -267,6 +267,10 @@ class Minitel
 {
 public:
   Minitel(HardwareSerial& serial);
+  
+  #if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
+  Minitel(HardwareSerial& serial, int8_t rxPin, int8_t txPin);
+  #endif
   
   // Ecrire un octet, un mot ou un code de 4 octets maximum / Lire un octet
   void writeByte(byte b);
