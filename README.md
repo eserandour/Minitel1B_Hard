@@ -18,7 +18,6 @@ Intégration des modifications proposées par iodeo :<br>
 * On ne ferme pas la liaison série au moment de changer la vitesse pour l'esp32 car cela parasite l'acquittement dans certains cas. La fermeture reste nécessaire pour les arduinos (ajout macro #else)<br>
 * Renommage de la variable SPEED en _SPEED (conflit avec le noyau)<br>
 * Ajout d'un constructeur pour ESP32 permettant la relocalisation des broches à utiliser pour le port Série. Les paramètres rxPin et txPin sont relatifs à l'esp32 : rxPin va au tx du minitel et txPin va au rx du minitel<br>
-<br>
 Mise à jour des exemples tenant compte des modifications chez Espressif Systems (version 3.3.7 de esp32 testée)<br>
 <br>
 12/03/2023<br>
