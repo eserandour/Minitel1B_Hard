@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 /*
-   Minitel1B_Hard - Fichier source - Version du 25 mars 2026 à 21h32
+   Minitel1B_Hard - Fichier source - Version du 25 mars 2026 à 22h48
    Copyright 2016-2026 - Eric Sérandour
    https://entropie.org/3615/
    
@@ -200,7 +200,7 @@ int Minitel::searchSpeed() {
   int speed;
   do {
     mySerial.begin(_SPEED[i], SERIAL_7E1);
-    if (i++ > 3) { i = 0; }
+    if (++i > 3) { i = 0; }
     speed = currentSpeed();
   } while (speed < 0);
   return speed;  // En bauds
