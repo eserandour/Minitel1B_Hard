@@ -6,7 +6,7 @@ http://543210.free.fr/TV/stum1b.pdf
 
 <b>Historique</b> :
 
-<b>Dernière Version :</b> 25/03/2026 à 21h32.<br>
+<b>Dernière Version :</b> 25/03/2026 à 22h48.<br>
 J'utilise la version 1.8.19 d'Arduino pour compiler.<br>
 Je travaille avec un ATmega 1284P, un ATmega 2560 et un ESP32-WROOM-32E.<br>
 Pour la carte ESP32, j'utilise esp32 d'Espressif Systems (version 3.3.7) - URL de gestionnaire de cartes supplémentaires : https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json<br>
