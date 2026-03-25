@@ -13,7 +13,7 @@ Pour la carte ESP32, j'utilise esp32 d'Espressif Systems (version 3.3.7) - URL d
 Avec la carte Arduino Mega (ATmega 2560), j'utilise le <a href="https://entropie.org/3615/index.php/hardware-2023/" target="_blank">shield 3615</a> (version 2023).
 
 25/03/2026<br>
-Intégration des modifications proposées par iodeo + Mise à jour des exemples en tenant compte des modifications chez Espressif Systems (version 3.3.7 de esp32 testée) :<br>
+Intégration des modifications proposées par iodeo + <b>Mise à jour des exemples</b> en tenant compte des modifications chez Espressif Systems (version 3.3.7 de esp32 testée) :<br>
 * <b>Utilisation de la config SERIAL_7E1 de hardwareSerial</b> (calcul de parité natif des noyaux arduino et esp32)<br>
 * On ne ferme pas la liaison série au moment de changer la vitesse pour l'esp32 car cela parasite l'acquittement dans certains cas. La fermeture reste nécessaire pour les arduinos (ajout macro #else)<br>
 * Renommage de la variable SPEED en _SPEED (conflit avec le noyau)<br>
