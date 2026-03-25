@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////
 /*
-   TestCaracteresSpeciaux - Version du 17 mars 2023 à 14h24
-   Copyright 2023 - Eric Sérandour
+   TestCaracteresSpeciaux - Version du 25 mars 2026 à 21h27
+   Copyright 2023-2026 - Eric Sérandour
    https://entropie.org/3615/
    
    Documentation utilisée :
@@ -30,7 +30,7 @@
 #if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)  // Pour ESP32
 // Le troisième port série matériel de l'ESP32 (Serial2 / U2RXD U2TXD)
 // est utilisé pour la connexion avec le Minitel.
-Minitel minitel(Serial2);
+Minitel minitel(Serial2, 16, 17); // Testé avec esp32 d'Espressif Systems (version 3.3.7)
 #else  // Pour ATmega 1284P ou ATmega 2560 notamment
 // Le deuxième port série matériel de l'ATMega (Serial1 / RXD1 TXD1)
 // est utilisé pour la connexion avec le Minitel.
