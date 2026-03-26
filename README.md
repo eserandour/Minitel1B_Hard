@@ -1,5 +1,5 @@
 # Minitel1B_Hard
-<b>Minitel Library for Arduino (with HardwareSerial)</b>
+<b>Minitel Library for Arduino/ESP32 (with HardwareSerial)</b>
 
 Documentation utilisée : Spécifications Techniques d'Utilisation du Minitel 1B<br>
 http://543210.free.fr/TV/stum1b.pdf
