@@ -9,7 +9,7 @@ http://543210.free.fr/TV/stum1b.pdf
 <b>Dernière Version :</b> 25/03/2026 à 22h48.<br>
 J'utilise la version 1.8.19 d'Arduino pour compiler.<br>
 Je travaille avec un ATmega 1284P, un ATmega 2560 et un ESP32-WROOM-32E.<br>
-Pour la carte ESP32, j'utilise esp32 d'Espressif Systems (version 3.3.7 => <a href="https://github.com/espressif/arduino-esp32" target="_blank">https://github.com/espressif/arduino-esp32</a>). Dans le logiciel Arduino : Fichier > Préférences > URL de gestionnaire de cartes supplémentaires : https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json<br>
+Pour la carte ESP32, j'utilise esp32 d'Espressif Systems (version 3.3.7 => <a href="https://github.com/espressif/arduino-esp32" target="_blank">https://github.com/espressif/arduino-esp32</a>). Je rajoute cette carte dans le logiciel Arduino : Fichier > Préférences > URL de gestionnaire de cartes supplémentaires : https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json.<br>
 Avec la carte Arduino Mega (ATmega 2560), j'utilise le <a href="https://entropie.org/3615/index.php/hardware-2023/" target="_blank">shield 3615</a> (version 2023).
 
 25/03/2026<br>
