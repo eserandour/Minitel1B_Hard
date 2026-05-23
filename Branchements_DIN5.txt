@@ -2,11 +2,11 @@ Branchements :
 
 Dos du Minitel             Carte Arduino
 
-DIN 1 : RX    <--------->  TX    (TX1 = D18 sur Arduino Méga)
+DIN 1 : RX    <--------->  TX    (TX1 = D18 sur Arduino Méga) (TX2 = GPIO17 sur ESP32-WROOM-32E)
 DIN 4 :       <---/ /--->
 DIN 2 : GND   <--------->  GND
 DIN 5 : +8,5V <---/ /--->
-DIN 3 : TX    <----+---->  RX    (RX1 = D19 sur Arduino Mega)
+DIN 3 : TX    <----+---->  RX    (RX1 = D19 sur Arduino Mega) (RX2 = GPIO16 sur ESP32-WROOM-32E)
                    |
                    R
                    |
