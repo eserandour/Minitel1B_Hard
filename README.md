@@ -39,14 +39,16 @@ Pour ajouter la carte ESP32 dans le logiciel Arduino :
 
 ## Branchements
 
-```
-Dos du Minitel             Carte Arduino ou ESP32
+### Carte fonctionnant en 5V (Arduino Mega, ATmega 1284P)
 
-DIN 1 : RX    <--------->  TX    (TX1 = D18 sur Arduino Mega) (TX2 = GPIO17 sur ESP32-WROOM-32E)
+```
+Dos du Minitel             Carte Arduino
+
+DIN 1 : RX    <--------->  TX    (TX1 = D18 sur Arduino Mega)
 DIN 4 :       <---/ /--->
 DIN 2 : GND   <--------->  GND
 DIN 5 : +8,5V <---/ /--->
-DIN 3 : TX    <----+---->  RX    (RX1 = D19 sur Arduino Mega) (RX2 = GPIO16 sur ESP32-WROOM-32E)
+DIN 3 : TX    <----+---->  RX    (RX1 = D19 sur Arduino Mega)
                    |
                    R
                    |
@@ -54,6 +56,29 @@ DIN 3 : TX    <----+---->  RX    (RX1 = D19 sur Arduino Mega) (RX2 = GPIO16 sur 
 ```
 
 La sortie TX du Minitel est à collecteur ouvert : elle nécessite une résistance de tirage R (pull-up). J'utilise R = 10 kilohms (la documentation technique indique une valeur comprise entre 2,3 et 200 kilohms, p.69). Le +5V est récupéré sur la broche DIN 5 (+8,5V), sur laquelle est branché un régulateur 5V.
+
+### Carte fonctionnant en 3,3V (ESP32)
+
+**Attention : l'ESP32 fonctionne en 3,3V et ses broches ne supportent pas le 5V.** Il ne faut donc pas relier directement sa broche RX à la ligne TX du Minitel, tirée au +5V par la résistance R : il faut intercaler un convertisseur de tension (convertisseur de niveaux logiques bidirectionnel 3,3V <-> 5V) entre le Minitel et l'ESP32.
+
+```
+Dos du Minitel             Convertisseur de niveaux             ESP32-WROOM-32E
+                           côté 5V (HV)  côté 3,3V (LV)
+
+DIN 1 : RX    <--------->  HV1           LV1  <--------->  TX    (TX2 = GPIO17)
+DIN 4 :       <---/ /--->
+DIN 2 : GND   <--------->  GND           GND  <--------->  GND
+DIN 5 : +8,5V <---/ /--->
+DIN 3 : TX    <----+---->  HV2           LV2  <--------->  RX    (RX2 = GPIO16)
+                   |
+                   R
+                   |
+                  +5V ---->  HV            LV   <----------  3,3V  (broche 3V3 de l'ESP32)
+```
+
+- La résistance R de tirage reste du côté 5V (HV) du convertisseur.
+- Le côté 3,3V (LV) est alimenté par la broche 3V3 de l'ESP32.
+- Le +5V (régulateur branché sur la broche DIN 5) alimente le côté 5V du convertisseur et peut alimenter l'ESP32 par sa broche 5V (VIN).
 
 Voir aussi le fichier [Branchements_DIN5.txt](Branchements_DIN5.txt).
 
@@ -192,6 +217,8 @@ Corrections de bugs :
 - `print` envoyait des codes de contrôle au Minitel pour les caractères UTF-8 non gérés (lettres d'autres langues, emojis) ; ils sont maintenant ignorés.
 - `getKeyCode` : le délai d'attente après la touche Esc dépend de la vitesse (les séquences du clavier étendu pouvaient être coupées à 300 bauds).
 - `changeSpeed` renvoie -1 pour une vitesse non prévue, sans modifier le port série (la liaison était perdue).
+
+**Branchements** : précision pour l'ESP32, qui fonctionne en 3,3V : il faut un convertisseur de tension entre le Minitel et l'ESP32 (voir [Branchements](#branchements)).
 
 **Changement de nom** : la constante `SUPRESSION_CARACTERE` (faute de frappe) devient `SUPPRESSION_CARACTERE`. Les programmes qui utilisent l'ancien nom doivent être mis à jour.
 
