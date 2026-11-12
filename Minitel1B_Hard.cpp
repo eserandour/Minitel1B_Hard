@@ -30,6 +30,11 @@
 
 #include "Minitel1B_Hard.h"
 
+// Délai maximal (en ms) accordé au Minitel pour répondre à une commande
+// du protocole. Passé ce délai, les fonctions concernées renvoient 0
+// (ou -1 pour celles qui renvoient un entier) au lieu de bloquer.
+#define TIMEOUT_REPONSE 1000
+
 ////////////////////////////////////////////////////////////////////////
 /*
    Public
@@ -164,15 +169,21 @@ unsigned long Minitel::identifyDevice() {  // Voir p.139
 
 int Minitel::changeSpeed(int bauds) {  // Voir p.141
   // Fonction modifiée par iodeo sur GitHub en octobre 2021
+  // Si la vitesse demandée n'est pas prévue, on renvoie -1 sans rien
+  // envoyer au Minitel et sans toucher au port série : sinon le port
+  // changerait de vitesse tout seul et on perdrait la liaison.
+  byte octetVitesse;
+  switch (bauds) {
+    case  300 : octetVitesse = 0b1010010; break;  // 0x52
+    case 1200 : octetVitesse = 0b1100100; break;  // 0x64
+    case 4800 : octetVitesse = 0b1110110; break;  // 0x76
+    case 9600 : octetVitesse = 0b1111111; break;  // 0x7F (pour le Minitel 2 seulement)
+    default   : return -1;
+  }
   // Format de la commande
   writeBytesPRO(2);  // 0x1B 0x3A
   writeByte(PROG);   // 0x6B
-  switch (bauds) {
-    case  300 : writeByte(0b1010010); break;  // 0x52
-    case 1200 : writeByte(0b1100100); break;  // 0x64
-    case 4800 : writeByte(0b1110110); break;  // 0x76
-    case 9600 : writeByte(0b1111111); break;  // 0x7F (pour le Minitel 2 seulement)
-  }
+  writeByte(octetVitesse);
   #if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
   mySerial.flush(false); // Patch pour Arduino-ESP32 (still needed for v2.0.8) https://github.com/espressif/arduino-esp32
   mySerial.updateBaudRate(bauds);
@@ -180,6 +191,7 @@ int Minitel::changeSpeed(int bauds) {  // Voir p.141
   mySerial.end();
   mySerial.begin(bauds, SERIAL_7E1);
   #endif
+  currentBauds = bauds;
   // Acquittement
   return workingSpeed();  // En bauds (voir section Private ci-dessous)
 }
@@ -194,12 +206,19 @@ int Minitel::currentSpeed() {  // Voir p.141
 }
 /*--------------------------------------------------------------------*/
 
-int Minitel::searchSpeed() {
+int Minitel::searchSpeed(unsigned long timeout) {
+  // timeout (en ms) : durée maximale de la recherche. Passé ce délai,
+  // on renvoie -1 (le port série reste à la dernière vitesse essayée).
+  // Avec timeout = 0 (valeur par défaut), on cherche jusqu'à obtenir
+  // une réponse, ce qui laisse au Minitel le temps d'être mis sous tension.
   const int _SPEED[4] = { 1200, 4800, 300, 9600 };  // 9600 bauds pour le Minitel 2 seulement
   int i = 0;
   int speed;
+  unsigned long debut = millis();
   do {
+    if (timeout > 0 && millis() - debut >= timeout) return -1;
     mySerial.begin(_SPEED[i], SERIAL_7E1);
+    currentBauds = _SPEED[i];
     if (++i > 3) { i = 0; }
     speed = currentSpeed();
   } while (speed < 0);
@@ -301,12 +320,16 @@ void Minitel::moveCursorReturn(int n) {  // Voir p.94
 /*--------------------------------------------------------------------*/
 
 int Minitel::getCursorX() {
-  return (getCursorXY() & 0x0000FF) - 0x40;
+  unsigned long trame = getCursorXY();
+  if (trame == 0) return -1;  // Pas de réponse du Minitel
+  return (trame & 0x0000FF) - 0x40;
 }
 /*--------------------------------------------------------------------*/
 
 int Minitel::getCursorY() {
-  return ((getCursorXY() & 0x00FF00) >> 8) - 0x40;
+  unsigned long trame = getCursorXY();
+  if (trame == 0) return -1;  // Pas de réponse du Minitel
+  return ((trame & 0x00FF00) >> 8) - 0x40;
 }
 /*--------------------------------------------------------------------*/
 
@@ -510,10 +533,30 @@ void Minitel::print(String chaine) {
         case 0x60: code = 0; break; // ` non visualisable seul
       }
     }
-    else if (code == 0xC2 || code == 0xC3 || code == 0xC5 || code == 0xCE) {
-      // Caractères sur 2 octets
-      code = (code << 8) + (byte) chaine.charAt(i++);
+    else {
+      // Caractères UTF-8 sur 2, 3 ou 4 octets.
+      // On lit toujours la séquence en entier, même si le caractère n'est
+      // pas connu du Minitel : sinon ses octets seraient envoyés tels quels
+      // et, tronqués à 7 bits, deviendraient des codes de contrôle
+      // (CR, US, CAN...) qui perturbent l'affichage.
+      byte nbSuite = 0;  // Nombre d'octets de continuation attendus
+      if      (code >= 0xC0 && code <= 0xDF) nbSuite = 1;
+      else if (code >= 0xE0 && code <= 0xEF) nbSuite = 2;
+      else if (code >= 0xF0 && code <= 0xF7) nbSuite = 3;
+      boolean valide = (nbSuite > 0);  // Sinon : octet de continuation isolé ou octet invalide
+      while (nbSuite > 0) {
+        byte suite = (i < chaine.length()) ? (byte) chaine.charAt(i) : 0;
+        if ((suite & 0xC0) != 0x80) {  // Séquence tronquée : on ne consomme pas cet octet
+          valide = false;
+          break;
+        }
+        code = (code << 8) + suite;
+        i++;
+        nbSuite--;
+      }
+      if (!valide) code = 0;
       switch (code) {                        // Voir p.90 pour VGP5 ou VGP2
+        case 0: break;                       // Séquence UTF-8 invalide : ignorée
                          // 0x19 => SS2 (Accès au jeu G2)
                          // 0x0F => SI (Accès au jeu G0)
         case 0xC2A3: code = 0x1923; break;   // £ (VGP5 et VGP2)
@@ -557,14 +600,6 @@ void Minitel::print(String chaine) {
         case 0xC592: code = 0x196A; break;   // Œ (VGP5 et VGP2)
         case 0xC593: code = 0x197A; break;   // œ (VGP5 et VGP2)
         case 0xCEB2: code = 0x197B; break;   // β (VGP5 seulement)
-        default: code = 0; // supposé non-visualisable
-      }
-    }
-    else if (code == 0xE2) {
-      // Caractères sur 3 octets
-      code = (code << 8) + (byte) chaine.charAt(i++);
-      code = (code << 8) + (byte) chaine.charAt(i++);
-      switch (code) {
         case 0xE28094: code = 0x60; break;   // —
         case 0xE28690: code = 0x192C; break; // ←
         case 0xE28691: code = 0x5E; break;   // ↑
@@ -797,55 +832,26 @@ unsigned long Minitel::getKeyCode(bool unicode) {
   // Renvoie le code brut émis par le clavier (unicode = false)
   // ou sa conversion unicode si applicable (unicode = true, choix par défaut)
   unsigned long code = 0;
+  byte b;
+  // Un accent, un tréma ou une cédille a été reçu lors d'un appel
+  // précédent : on attend la lettre qui va avec, sans bloquer.
+  if (pendingKeyCode != 0) {
+    if (mySerial.available() <= 0) return 0;
+    code = pendingKeyCode;
+    pendingKeyCode = 0;
+    return diacriticKeyCode(code, unicode);
+  }
   // Code unique
   if (mySerial.available()>0) {
     code = readByte();
   }
   // Séquences de deux ou trois codes (voir p.118)
   if (code == 0x19) {  // SS2
-    while (!mySerial.available()>0);  // Indispensable
-    code = (code << 8) + readByte();
+    if (!waitByte(b, sequenceTimeout())) return 0;  // Séquence incomplète
+    code = (code << 8) + b;
     // Les diacritiques (3 codes)
     if ((code == 0x1941) || (code == 0x1942) || (code == 0x1943) || (code == 0x1948) || (code == 0x194B)) {  // Accents, tréma, cédille
-      // Bug 1 : Pour éviter de compter un caractère lorsqu'on appuie plusieurs fois de suite sur une touche avec accent ou tréma
-      byte caractere = 0x19;
-      while (caractere == 0x19) {  
-        while (!mySerial.available()>0);  // Indispensable
-        caractere = readByte();
-        if (caractere == 0x19) {
-          while (!mySerial.available()>0);  // Indispensable
-          caractere = readByte();
-          caractere = 0x19;
-        }
-      }
-      // Bug 2 : Pour éviter de compter un caractère lorsqu'on appuie sur les touches de fonction après avoir appuyé sur une touche avec accent ou tréma
-      if (caractere == 0x13) {  // Les touches RETOUR REPETITION GUIDE ANNULATION SOMMAIRE CORRECTION SUITE CONNEXION_FIN ont un code qui commence par 0x13
-          while (!mySerial.available()>0);  // Indispensable
-          caractere = readByte();  // Les touches de fonction sont codées sur 2 octets (0x13..)
-          caractere = 0;
-          code = 0;
-      }
-      code = (code << 8) + caractere;
-      if (unicode) {
-        switch (code) {  // On convertit le code reçu en unicode
-          case 0x194161 : code = 0xE0; break;  // à
-          case 0x194165 : code = 0xE8; break;  // è
-          case 0x194175 : code = 0xF9; break;  // ù
-          case 0x194265 : code = 0xE9; break;  // é
-          case 0x194361 : code = 0xE2; break;  // â
-          case 0x194365 : code = 0xEA; break;  // ê
-          case 0x194369 : code = 0xEE; break;  // î
-          case 0x19436F : code = 0xF4; break;  // ô
-          case 0x194375 : code = 0xFB; break;  // û
-          case 0x194861 : code = 0xE4; break;  // ä
-          case 0x194865 : code = 0xEB; break;  // ë
-          case 0x194869 : code = 0xEF; break;  // ï
-          case 0x19486F : code = 0xF6; break;  // ö
-          case 0x194875 : code = 0xFC; break;  // ü
-          case 0x194B63 : code = 0xE7; break;  // ç
-          default : code = caractere; break;
-        }
-      }
+      code = diacriticKeyCode(code, unicode);
     }
     // Les autres caractères spéciaux disponibles sous Arduino (2 codes)
     else {
@@ -868,23 +874,24 @@ unsigned long Minitel::getKeyCode(bool unicode) {
   }
   // Touches de fonction (voir p.123)
   else if (code == 0x13) {
-    while (!mySerial.available()>0);  // Indispensable
-    code = (code << 8) + readByte();
+    if (!waitByte(b, sequenceTimeout())) return 0;  // Séquence incomplète
+    code = (code << 8) + b;
   }  
   // Touches de gestion du curseur lorsque le clavier est en mode étendu (voir p.124)
   // Pour passer au clavier étendu manuellement : Fnct C + E
   // Pour revenir au clavier vidéotex standard  : Fnct C + V
   else if (code == 0x1B) {
-    delay(20);  // Indispensable. 0x1B seul correspond à la touche Esc,
-                // on ne peut donc pas utiliser la boucle while (!available()>0).           
-    if (mySerial.available()>0) {
-      code = (code << 8) + readByte();
+    // 0x1B seul correspond à la touche Esc : on ne peut donc pas attendre
+    // indéfiniment l'octet suivant. Le délai dépend de la vitesse de la
+    // liaison (à 300 bauds, un caractère dure environ 33 ms).
+    if (waitByte(b, sequenceTimeout())) {
+      code = (code << 8) + b;
       if (code == 0x1B5B) {
-        while (!mySerial.available()>0);  // Indispensable
-        code = (code << 8) + readByte();
+        if (!waitByte(b, sequenceTimeout())) return 0;  // Séquence incomplète
+        code = (code << 8) + b;
         if ((code == 0x1B5B34) || (code == 0x1B5B32)) {
-          while (!mySerial.available()>0);  // Indispensable
-          code = (code << 8) + readByte();
+          if (!waitByte(b, sequenceTimeout())) return 0;  // Séquence incomplète
+          code = (code << 8) + b;
         }
       }
     }
@@ -1108,6 +1115,96 @@ void Minitel::writeBytesP(int n) {
 }
 /*--------------------------------------------------------------------*/
 
+unsigned long Minitel::sequenceTimeout() {
+  // Délai maximal (en ms) entre deux octets d'une même séquence :
+  // deux durées de caractère (10 bits par caractère) plus une marge,
+  // sans jamais descendre sous 20 ms.
+  unsigned long dureeCaractere = (10000UL + currentBauds - 1) / currentBauds;  // 34 ms à 300 bauds, 9 ms à 1200 bauds
+  unsigned long timeout = 2 * dureeCaractere + 5;
+  return (timeout < 20) ? 20 : timeout;
+}
+/*--------------------------------------------------------------------*/
+
+boolean Minitel::waitByte(byte& b, unsigned long timeout) {
+  // Attend un octet pendant timeout ms au maximum.
+  // Renvoie false (b inchangé) si rien n'est arrivé.
+  unsigned long debut = millis();
+  while (mySerial.available() <= 0) {
+    if (millis() - debut >= timeout) return false;
+  }
+  b = readByte();
+  return true;
+}
+/*--------------------------------------------------------------------*/
+
+boolean Minitel::waitTrame(unsigned long attendu, unsigned long masque, unsigned long& trame, unsigned long timeout) {
+  // Lit les octets reçus jusqu'à ce que les derniers octets de la trame,
+  // filtrés par masque, valent attendu. Le masque permet d'ignorer les
+  // octets arrivés avant la réponse (une touche frappée au clavier juste
+  // avant la demande, par exemple).
+  // Renvoie false si la réponse n'est pas arrivée au bout de timeout ms.
+  while (!mySerial);  // On attend que le port soit sur écoute.
+  unsigned long debut = millis();
+  trame = 0;  // 32 bits = 4 octets
+  while ((trame & masque) != attendu) {
+    unsigned long ecoule = millis() - debut;
+    byte b;
+    if (ecoule >= timeout || !waitByte(b, timeout - ecoule)) return false;
+    trame = (trame << 8) + b;
+    //Serial.println(trame, HEX);
+  }
+  return true;
+}
+/*--------------------------------------------------------------------*/
+
+unsigned long Minitel::diacriticKeyCode(unsigned long code, bool unicode) {
+  // Utilisée par getKeyCode. code contient SS2 suivi d'un accent, d'un
+  // tréma ou d'une cédille (0x1941, 0x1942, 0x1943, 0x1948 ou 0x194B).
+  // On lit la lettre qui suit. Si elle n'est pas encore arrivée (touche
+  // d'accent seule, la lettre étant frappée ensuite), on mémorise le
+  // diacritique et on renvoie 0 : getKeyCode reprendra au prochain appel.
+  // Bug 1 : Pour éviter de compter un caractère lorsqu'on appuie plusieurs fois de suite sur une touche avec accent ou tréma
+  byte caractere = 0x19;
+  byte ignore;
+  while (caractere == 0x19) {
+    if (!waitByte(caractere, sequenceTimeout())) {
+      pendingKeyCode = code;
+      return 0;
+    }
+    if (caractere == 0x19) {
+      waitByte(ignore, sequenceTimeout());  // On ignore le nouveau diacritique
+    }
+  }
+  // Bug 2 : Pour éviter de compter un caractère lorsqu'on appuie sur les touches de fonction après avoir appuyé sur une touche avec accent ou tréma
+  if (caractere == 0x13) {  // Les touches RETOUR REPETITION GUIDE ANNULATION SOMMAIRE CORRECTION SUITE CONNEXION_FIN ont un code qui commence par 0x13
+    waitByte(ignore, sequenceTimeout());  // Les touches de fonction sont codées sur 2 octets (0x13..)
+    return 0;
+  }
+  code = (code << 8) + caractere;
+  if (unicode) {
+    switch (code) {  // On convertit le code reçu en unicode
+      case 0x194161 : code = 0xE0; break;  // à
+      case 0x194165 : code = 0xE8; break;  // è
+      case 0x194175 : code = 0xF9; break;  // ù
+      case 0x194265 : code = 0xE9; break;  // é
+      case 0x194361 : code = 0xE2; break;  // â
+      case 0x194365 : code = 0xEA; break;  // ê
+      case 0x194369 : code = 0xEE; break;  // î
+      case 0x19436F : code = 0xF4; break;  // ô
+      case 0x194375 : code = 0xFB; break;  // û
+      case 0x194861 : code = 0xE4; break;  // ä
+      case 0x194865 : code = 0xEB; break;  // ë
+      case 0x194869 : code = 0xEF; break;  // ï
+      case 0x19486F : code = 0xF6; break;  // ö
+      case 0x194875 : code = 0xFC; break;  // ü
+      case 0x194B63 : code = 0xE7; break;  // ç
+      default : code = caractere; break;
+    }
+  }
+  return code;
+}
+/*--------------------------------------------------------------------*/
+
 void Minitel::writeBytesPRO(int n) {  // Voir p.134
   writeByte(ESC);  // 0x1B
   switch (n) {
@@ -1128,8 +1225,8 @@ unsigned long Minitel::identificationBytes() {  // Voir p.138
     }
     if (millis() - time > 1000) return 0; // On se donne 1000 ms pour obtenir la réponse
   }
-  while (!mySerial.available() > 0); // Indispensable
-  if (readByte() != 0x04) return 0;  // La trame doit se terminer par EOT (0x04)
+  byte eot;
+  if (!waitByte(eot, sequenceTimeout()) || eot != 0x04) return 0;  // La trame doit se terminer par EOT (0x04)
   trame = (trame << 8) >> 8;  // On élimine l'octet SOH (0x01) de la trame
   return trame;  // 3 octets
                  // octet définissant le constructeur du Minitel
@@ -1187,14 +1284,9 @@ byte Minitel::workingMode() {  // Voir p.143
   // PC : PCE (1 = actif)
   // RL : rouleau (1 = actif)
   // F  : format d'écran (1 = 80 colonnes)
-  while (!mySerial);  // On attend que le port soit sur écoute.
-  unsigned long trame = 0;  // 32 bits = 4 octets  
-  while (trame >> 8 != 0x1B3A73) {  // PRO2 (0x1B,0x3A), REP_STATUS_FONCTIONNEMENT (0x73)
-    if (mySerial.available() > 0) {
-      trame = (trame << 8) + readByte();
-      //Serial.println(trame, HEX);
-    }
-  }
+  // Renvoie 0 si le Minitel ne répond pas.
+  unsigned long trame;
+  if (!waitTrame(0x1B3A7300, 0xFFFFFF00, trame, TIMEOUT_REPONSE)) return 0;  // PRO2 (0x1B,0x3A), REP_STATUS_FONCTIONNEMENT (0x73)
   return (byte) trame;
 }
 /*--------------------------------------------------------------------*/
@@ -1203,16 +1295,12 @@ byte Minitel::workingKeyboard() {  // Voir p.142
   // On récupère notamment les 3 bits de poids faibles suivants : C0 0 Eten
   // Eten : mode étendu (1 = actif)
   // C0   : codage en jeu C0 des touches de gestion du curseur (1 = actif)
-  while (!mySerial);  // On attend que le port soit sur écoute.
-  unsigned long trame = 0;  // 32 bits = 4 octets  
-  while (trame != 0x1B3B7359) {  // PRO3 (0x1B,0x3B), REP_STATUS_CLAVIER (0x73), CODE_RECEPTION_CLAVIER (0x59)
-    if (mySerial.available() > 0) {
-      trame = (trame << 8) + readByte();
-      //Serial.println(trame, HEX);
-    }
-  }
-  while (!mySerial.available()>0);  // Indispensable
-  return readByte(); // Octet de statut fonctionnement clavier
+  // Renvoie 0 si le Minitel ne répond pas.
+  unsigned long trame;
+  byte statut;
+  if (!waitTrame(0x1B3B7359, 0xFFFFFFFF, trame, TIMEOUT_REPONSE)) return 0;  // PRO3 (0x1B,0x3B), REP_STATUS_CLAVIER (0x73), CODE_RECEPTION_CLAVIER (0x59)
+  if (!waitByte(statut, sequenceTimeout())) return 0;
+  return statut; // Octet de statut fonctionnement clavier
 }
 /*--------------------------------------------------------------------*/
 
@@ -1227,16 +1315,12 @@ byte Minitel::workingAiguillage(byte module) {  // Voir p.136
   // b1 : clavier           0 : liaison coupée
   // b0 : écran
   // L'octet de statut contient également l'état de la ressource que constitue le module lui-même (0 : module bloqué ; 1 : module actif)
-  while (!mySerial);  // On attend que le port soit sur écoute.
-  unsigned long trame = 0;  // 32 bits = 4 octets
-  while (trame != (0x1B3B63 << 8 | module)) {  // PRO3 (0x1B,0x3B), FROM (0x63), code réception ou émission du module
-    if (mySerial.available() > 0) {
-      trame = (trame << 8) + readByte();
-      //Serial.println(trame, HEX);
-    }
-  }
-  while (!mySerial.available()>0);  // Indispensable
-  return readByte(); // Octet de statut associé à un module
+  // Renvoie 0 si le Minitel ne répond pas.
+  unsigned long trame;
+  byte statut;
+  if (!waitTrame((0x1B3B63UL << 8) | module, 0xFFFFFFFF, trame, TIMEOUT_REPONSE)) return 0;  // PRO3 (0x1B,0x3B), FROM (0x63), code réception ou émission du module
+  if (!waitByte(statut, sequenceTimeout())) return 0;
+  return statut; // Octet de statut associé à un module
 }
 /*--------------------------------------------------------------------*/
 
@@ -1245,14 +1329,11 @@ byte Minitel::workingModem() {  // Voir p.126
   // On récupère uniquement la séquence immédiate 0x1359
   // en cas de connexion confirmé, la séquence 0x1353 s'ajoutera - non traité ici
   // en cas de timeout (environ 40sec), la séquence 0x1359 s'ajoutera - non traité ici
-  while (!mySerial);  // On attend que le port soit sur écoute.
-  unsigned int trame = 0;  // 16 bits = 2 octets
-  while (trame >> 8 != 0x13) {
-    if (mySerial.available() > 0) {
-      trame = (trame << 8) + readByte();
-      //Serial.println(trame, HEX);
-    }
-  }
+  // Renvoie 0 si le Minitel ne répond pas.
+  // On ne compare que l'avant-dernier octet reçu à SEP (0x13) : le masque
+  // donne le même résultat sur ATmega (int de 16 bits) et sur ESP32 (32 bits).
+  unsigned long trame;
+  if (!waitTrame(0x1300, 0xFF00, trame, TIMEOUT_REPONSE)) return 0;
   return (byte) trame;
 }
 /*--------------------------------------------------------------------*/
@@ -1262,13 +1343,11 @@ unsigned long Minitel::getCursorXY() {  // Voir p.98
   writeByte(ESC);
   writeByte(0x61);
   // Réponse
-  while (!mySerial);  // On attend que le port soit sur écoute.
-  unsigned long trame = 0;  // 32 bits = 4 octets  
-  while (trame >> 16 != US) {
-    if (mySerial.available() > 0) {
-      trame = (trame << 8) + readByte();
-    }
-  }
-  return trame;
+  // Renvoie 0 si le Minitel ne répond pas.
+  // Le masque ignore l'octet éventuellement reçu juste avant US
+  // (une touche frappée au clavier, par exemple).
+  unsigned long trame;
+  if (!waitTrame((unsigned long) US << 16, 0xFF0000, trame, TIMEOUT_REPONSE)) return 0;
+  return trame & 0xFFFFFF;  // US, rangée, colonne
 }
 /*--------------------------------------------------------------------*/

@@ -1,164 +1,410 @@
 # Minitel1B_Hard
-<b>Minitel Library for Arduino/ESP32 (with HardwareSerial)</b>
 
-Documentation utilisée : Spécifications Techniques d'Utilisation du Minitel 1B<br>
-http://543210.free.fr/TV/stum1b.pdf
+Bibliothèque Minitel pour Arduino et ESP32, utilisant un port série matériel (`HardwareSerial`).
 
-<b>Historique</b> :
+*Minitel library for Arduino/ESP32 (with HardwareSerial).*
 
-<b>Dernière Version :</b> 25/03/2026 à 22h48.<br>
-J'utilise la version 1.8.19 d'Arduino pour compiler.<br>
-Je travaille avec un ATmega 2560, un ESP32-WROOM-32E et un ATmega 1284P.<br>
-Pour la carte ESP32, j'utilise esp32 d'Espressif Systems (version 3.3.7 => https://github.com/espressif/arduino-esp32). Je rajoute cette carte dans le logiciel Arduino : Fichier > Préférences > URL de gestionnaire de cartes supplémentaires : https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json, puis je vais dans Outils > Type de carte > Gestionnaire de carte > Type > Contribué > esp32 by Espressif Systems et j'installe la version 3.3.7.<br>
-Avec la carte Arduino Mega (ATmega 2560), j'utilise le <a href="https://entropie.org/3615/index.php/hardware-2023/" target="_blank">shield 3615</a> (version 2023).
+Elle permet de piloter un Minitel 1B (ou compatible) par sa prise péri-informatique : affichage de texte et de semi-graphiques, couleurs et tailles, gestion du curseur, lecture du clavier et commandes du protocole (vitesse, modes, aiguillages, modem).
 
-25/03/2026<br>
-Intégration des modifications proposées par iodeo + <b>Mise à jour des exemples</b> en tenant compte des modifications chez Espressif Systems (version 3.3.7 de esp32 testée) :<br>
-* <b>Utilisation de la config SERIAL_7E1 de hardwareSerial</b> (calcul de parité natif des noyaux arduino et esp32)<br>
-* On ne ferme pas la liaison série au moment de changer la vitesse pour l'esp32 car cela parasite l'acquittement dans certains cas. La fermeture reste nécessaire pour les arduinos (ajout macro #else)<br>
-* Renommage de la variable SPEED en _SPEED (conflit avec le noyau)<br>
-* <b>Ajout d'un constructeur pour ESP32 permettant la relocalisation des broches à utiliser pour le port Série</b>. Les paramètres rxPin et txPin sont relatifs à l'esp32 : rxPin va au tx du minitel et txPin va au rx du minitel<br>
-* searchSpeed: index incrementation corrected<br>
-* Add timeout in identificationBytes function<br>
+Documentation utilisée : [Spécifications Techniques d'Utilisation du Minitel 1B](http://543210.free.fr/TV/stum1b.pdf). Les numéros de page cités dans le code renvoient à ce document.
 
-12/03/2023<br>
-<b>Correction de deux bugs mineurs</b> dans getKeyCode(bool unicode)<br>
-<b>Mise à jour de l'exemple</b> TestCaracteresSpeciaux.ino<br>
+## Sommaire
 
-11/03/2023<br>
-Suppression de l'exemple Couleurs_3615.ino (car redondant).<br>
-<b>Mise à jour de tous les autres exemples</b> pour tenir compte des différences entre ce qui concerne l'ATmega 1284P et l'ESP32-WROOM-32E.<br>
+- [Matériel et environnement](#matériel-et-environnement)
+- [Installation](#installation)
+- [Branchements](#branchements)
+- [Démarrage rapide](#démarrage-rapide)
+- [Exemples](#exemples)
+- [Fonctions](#fonctions)
+- [Valeurs de retour et délais d'attente](#valeurs-de-retour-et-délais-dattente)
+- [Licence et remerciements](#licence-et-remerciements)
+- [Historique](#historique)
 
-06/03/2023<br>
-<b>Mise à jour des exemples :</b><br>
-TestCaracteresSpeciaux.ino<br>
-Tweet_3615.ino<br>
-Couleurs_3615.ino<br>
+## Matériel et environnement
 
-05/03/2023<br>
-<b>Ajout d'une nouvelle fonction :</b><br>
-int getNbBytes(unsigned long code)<br>
-à utiliser (si besoin) en association avec String getString(unsigned long code) afin de déterminer le nombre d'octets utilisés pour un caractère codé en UTF-8.<br>
-<b>Mise à jour des exemples :</b><br>
-TestCaracteresSpeciaux.ino<br>
-Couleurs_3615.ino<br>
-Tweet_3615.ino<br>
+- Cartes utilisées : ATmega 2560 (Arduino Mega), ATmega 1284P et ESP32-WROOM-32E.
+- Compilation avec Arduino 1.8.19.
+- Pour l'ESP32 : carte esp32 d'Espressif Systems, version 3.3.7 (<https://github.com/espressif/arduino-esp32>).
+- Avec l'Arduino Mega, j'utilise le [shield 3615](https://entropie.org/3615/index.php/hardware-2023/) (version 2023).
 
+## Installation
 
-28/02/2023<br>
-<b>La fonction write(unsigned long code) est renommée writeCode(unsigned long code).</b><br>
-J'ai dû changer son nom car avec ce nom un problème est apparu dans l'usage de la bibliothèque Minitel1B_Soft : le Minitel se bloquait. Il s'agissait probablement d'un conflit avec la fonction write de la bibliothèque SoftwareSerial. Par souci de cohérence entre les bibliothèques Minitel1B_Hard et Minitel1B_Soft, j'ai renommé write en writeCode.<br>
+1. Télécharger le dépôt et copier le dossier `Minitel1B_Hard` dans le dossier `libraries` du carnet de croquis Arduino.
+2. Redémarrer le logiciel Arduino : les exemples apparaissent dans Fichier > Exemples > Minitel1B_Hard.
 
-27/02/2023<br>
-Correction d'un bug dans unsigned long identificationBytes()<br>
-Mise à jour de l'exemple TestCaracteresSpeciaux.ino<br>
+Pour ajouter la carte ESP32 dans le logiciel Arduino :
 
-27/02/2023 - Sur proposition de iodeo :<br>
-Correction d'un bug sur le caractère Bêta.<br>
-<b>Ajout d'une fonction pour identifier le Minitel :</b><br>
-unsigned long identifyDevice()<br>
+1. Fichier > Préférences > URL de gestionnaire de cartes supplémentaires : `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
+2. Outils > Type de carte > Gestionnaire de carte > Type > Contribué > esp32 by Espressif Systems, puis installer la version 3.3.7.
 
-26/02/2023<br>
-Des exemples où il est question de caractères...<br>
-<b>Ajout d'un nouvel exemple :</b><br>
-TestCaracteresSpeciaux.ino<br>
-<b>Modification des exemples :</b><br>
-Couleurs_3615.ino<br>
-Tweet_3615.ino<br>
+## Branchements
 
-26/02/2023 - Sur proposition de iodeo :<br>
-Pour une meilleure gestion des <b>caractères spéciaux</b> (notamment dans la console série) :<br>
-<b>Ajout de nouvelles fonctions :</b><br>
-void write(unsigned long code)<br>
-String getString(unsigned long code)<br>
-boolean isVisualisable(unsigned long code)<br>
-<b>Modification de :</b><br>
-void print(String chaine)<br>
-unsigned long getKeyCode(bool unicode = true)<br>
-<b>Suppression, car devenues inutiles, de :</b><br>
-void printDiacriticChar(unsigned char caractere)<br>
-boolean isDiacritic(unsigned char caractere)<br>
+```
+Dos du Minitel             Carte Arduino ou ESP32
 
-25/06/2022 - Sur proposition de iodeo :<br>
-Correction d'un bug dans la fonction byte reset()
+DIN 1 : RX    <--------->  TX    (TX1 = D18 sur Arduino Mega) (TX2 = GPIO17 sur ESP32-WROOM-32E)
+DIN 4 :       <---/ /--->
+DIN 2 : GND   <--------->  GND
+DIN 5 : +8,5V <---/ /--->
+DIN 3 : TX    <----+---->  RX    (RX1 = D19 sur Arduino Mega) (RX2 = GPIO16 sur ESP32-WROOM-32E)
+                   |
+                   R
+                   |
+                  +5V
+```
 
-24/04/2022<br>
-Ajout d'un exemple : Portrait.ino (affichage d'une image)<br>
+La sortie TX du Minitel est à collecteur ouvert : elle nécessite une résistance de tirage R (pull-up). J'utilise R = 10 kilohms (la documentation technique indique une valeur comprise entre 2,3 et 200 kilohms, p.69). Le +5V est récupéré sur la broche DIN 5 (+8,5V), sur laquelle est branché un régulateur 5V.
 
-13/03/2022<br>
-Ajout d'un exemple basique : HelloWorld.ino<br>
+Voir aussi le fichier [Branchements_DIN5.txt](Branchements_DIN5.txt).
 
-21/02/2022 - Sur proposition de iodeo :<br>
-Ajout d'une option qui permet de désactiver la conversion des caractères en ascii étendue (cela sert en particulier pour la communication avec des services Minitel externes) :<br>
-unsigned long getKeyCode(bool ascii = true)
+## Démarrage rapide
 
-08/10/2021 - Sur proposition de iodeo :<br>
-Correction de bugs mineurs dans echo(boolean commande) et changeSpeed(int bauds).<br>
-Ajout d'une nouvelle fonction liée au modem (équivalent de la touche CONNEXION / FIN) :<br>
-byte connexion(boolean commande)<br>
-Patch pour Arduino-ESP32 core v1.0.6 https://github.com/espressif/arduino-esp32<br>
+```cpp
+#include <Minitel1B_Hard.h>
 
-02/07/2021<br>
-1 nouvelle fonction :<br>
-byte reset()<br>
+#if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)
+Minitel minitel(Serial2, 16, 17);  // ESP32 : port série, broche RX, broche TX
+#else
+Minitel minitel(Serial1);          // ATmega 1284P ou ATmega 2560 notamment
+#endif
 
-01/07/2021<br>
-1 nouvelle fonction :<br>
-byte statusAiguillage(byte module)<br>
-et mise à jour de :<br>
-byte pageMode()<br>
-byte scrollMode()<br>
-byte modeMixte()<br>
-byte modeVideotex()<br>
-byte standardTeleinformatique()<br>
-byte standardTeletel()<br>
-byte smallMode()<br>
-byte capitalMode()<br>
-byte extendedKeyboard()<br>
-byte standardKeyboard()<br>
-byte echo(boolean commande)<br>
-byte aiguillage(boolean commande, byte emetteur, byte recepteur)<br>
+void setup() {
+  // À la mise sous tension, le Minitel échange à 1200 bauds.
+  // On envisage cependant le cas où il se trouve dans un autre état.
+  minitel.changeSpeed(minitel.searchSpeed());
+  minitel.newScreen();
+}
 
-29/06/2021<br>
-5 nouvelles fonctions :<br>
-void writeWord(word w)<br>
-int modeMixte()<br>
-int modeVideotex()<br>
-int standardTeleinformatique()<br>
-int standardTeletel()<br>
+void loop() {
+  minitel.print("Hello World ! ");
+}
+```
 
+Sur ESP32, `rxPin` et `txPin` sont les broches de l'ESP32 : `rxPin` va au TX du Minitel et `txPin` au RX du Minitel.
 
-28/06/2021<br>
-Modification de la fonction :<br>
-unsigned long getKeyCode()<br>
-pour tenir compte des codes du clavier étendu.<br>
-Dans le fichier d'entête (.h), ajout de plusieurs #define dans la partie "Clavier".<br>
-2 nouvelles fonctions :<br>
-void echo(boolean commande)<br>
-void aiguillage(boolean commande, byte emetteur, byte recepteur)
+La vitesse peut aussi se régler au clavier du Minitel : Fnct P + 3 (300 bauds), Fnct P + 1 (1200 bauds), Fnct P + 4 (4800 bauds), Fnct P + 9 (9600 bauds, Minitel 2 seulement). Si le Minitel et la carte n'échangent pas à la même vitesse, la liaison est perdue ; `searchSpeed()` permet de la retrouver.
 
-11/05/2018<br>
-Modification de deux fonctions :<br>
-void printDiacriticChar(unsigned char caractere)<br>
-boolean isDiacritic(unsigned char caractere)<br>
+## Exemples
+
+| Exemple | Contenu |
+|---|---|
+| `HelloWorld` | Le minimum pour afficher du texte. |
+| `Demo` | Texte et semi-graphique avec ou sans lignage, tailles, couleurs, curseur. |
+| `Portrait` | Affichage d'une image vidéotex stockée en mémoire programme (voir [Conversion_Videotex_Hex](https://github.com/eserandour/Conversion_Videotex_Hex)). |
+| `Tweet_3615` | Saisie d'un texte au clavier dans un champ, avec les touches ENVOI, ANNULATION et CORRECTION. |
+| `TestCaracteresSpeciaux` | Affichage et saisie des caractères accentués et spéciaux, avec copie dans la console série. |
+
+## Fonctions
+
+La liste complète, commentée, se trouve dans [Minitel1B_Hard.h](Minitel1B_Hard.h).
+
+**Liaison série et identification**
+
+- `int changeSpeed(int bauds)` : change la vitesse (300, 1200, 4800 ; 9600 pour le Minitel 2).
+- `int currentSpeed()` : vitesse en cours, le Minitel et la carte échangeant à la même vitesse.
+- `int searchSpeed(unsigned long timeout = 0)` : recherche la vitesse du Minitel.
+- `unsigned long identifyDevice()` : constructeur, type et version du logiciel du Minitel.
+- `void writeByte(byte b)`, `void writeWord(word w)`, `void writeCode(unsigned long code)`, `byte readByte()` : accès direct aux octets.
+
+**Écran et curseur**
+
+- `newScreen()`, `newXY(x, y)` : nouvel écran, nouvelle position (ces deux fonctions réinitialisent les attributs).
+- `cursor()`, `noCursor()`, `moveCursorXY(x, y)`, `moveCursorLeft(n)`, `moveCursorRight(n)`, `moveCursorUp(n)`, `moveCursorDown(n)`, `moveCursorReturn(n)`.
+- `getCursorX()`, `getCursorY()` : position du curseur.
+- `clearScreen()`, `clearScreenFromCursor()`, `clearScreenToCursor()`, `clearLine()`, `clearLineFromCursor()`, `clearLineToCursor()`, `cancel()`.
+- `deleteChars(n)`, `insertChars(n)`, `startInsert()`, `stopInsert()`, `deleteLines(n)`, `insertLines(n)`.
+
+**Contenu**
+
+- `print(String chaine)`, `println(String chaine)`, `println()` : texte en UTF-8, converti en codes Minitel.
+- `printChar(char caractere)`, `printSpecialChar(byte b)` : caractère du jeu G0, caractère du jeu G2.
+- `attributs(byte attribut)` : couleurs de caractère et de fond, taille, clignotement, lignage, inversion (constantes `CARACTERE_...`, `FOND_...`, `DOUBLE_HAUTEUR`, `CLIGNOTEMENT`, etc.).
+- `textMode()`, `graphicMode()` : jeu G0 (alphanumérique) ou G1 (semi-graphique).
+- `graphic(byte b)`, `graphic(byte b, int x, int y)` : caractère semi-graphique de 6 pseudo-pixels, de `0b000000` à `0b111111`.
+- `repeat(int n)`, `bip()`.
+- `rect(x1, y1, x2, y2)`, `hLine(x1, y, x2, position)`, `vLine(x, y1, y2, position, sens)`.
+
+**Clavier**
+
+- `unsigned long getKeyCode(bool unicode = true)` : code de la touche frappée, converti en Unicode par défaut ; 0 si aucune touche. Les touches de fonction renvoient les constantes `ENVOI`, `RETOUR`, `REPETITION`, `GUIDE`, `ANNULATION`, `SOMMAIRE`, `CORRECTION`, `SUITE`, `CONNEXION_FIN`.
+- `String getString(unsigned long code)`, `int getNbBytes(unsigned long code)` : conversion d'un code Unicode en chaîne UTF-8.
+- `smallMode()`, `capitalMode()` : clavier en minuscules ou en majuscules.
+- `extendedKeyboard()`, `standardKeyboard()` : clavier étendu (touches de gestion du curseur) ou standard.
+- `echo(boolean commande)` : active ou désactive l'écho à l'écran de ce qui est tapé au clavier.
+
+**Modes, standards et protocole**
+
+- `pageMode()`, `scrollMode()` : mode page ou mode rouleau.
+- `modeMixte()`, `modeVideotex()` : 80 colonnes ou 40 colonnes.
+- `standardTeleinformatique()`, `standardTeletel()`.
+- `aiguillage(commande, emetteur, recepteur)`, `statusAiguillage(module)`.
+- `connexion(boolean commande)` : équivalent de la touche CONNEXION / FIN.
+- `reset()`.
+
+**Caractères affichés par `print`**
+
+- Les caractères du jeu G0, sauf `^` et `` ` `` qui ne sont pas visualisables seuls.
+- `à â ä è é ê ë î ï ô ö ù û ü ç`
+- `£ § ° ± ¼ ½ ¾ ÷ Œ œ β`
+- `— ← ↑ → ↓`
+- Les majuscules accentuées sont affichées sans accent (le Minitel n'en dispose pas, voir p.90).
+- Les autres caractères (et les caractères de contrôle) sont ignorés.
+
+## Valeurs de retour et délais d'attente
+
+Aucune fonction ne bloque le programme si le Minitel ne répond pas, à l'exception de `searchSpeed()` appelée sans paramètre.
+
+| Fonction | Sans réponse du Minitel |
+|---|---|
+| `changeSpeed`, `currentSpeed` | -1 au bout d'une seconde. `changeSpeed` renvoie aussi -1, sans rien modifier, si la vitesse demandée n'est pas prévue. |
+| `searchSpeed()` | Cherche jusqu'à obtenir une réponse, ce qui laisse au Minitel le temps d'être mis sous tension. |
+| `searchSpeed(timeout)` | -1 au bout de `timeout` millisecondes. |
+| `getCursorX`, `getCursorY` | -1 au bout d'une seconde. |
+| `identifyDevice` | 0 au bout d'une seconde. |
+| `pageMode`, `scrollMode`, `smallMode`, `capitalMode`, `extendedKeyboard`, `standardKeyboard`, `echo`, `aiguillage`, `statusAiguillage`, `connexion` | 0 au bout d'une seconde. |
+| `modeMixte`, `modeVideotex`, `standardTeleinformatique`, `standardTeletel`, `reset` | 0 au bout de 100 ms (on peut alors supposer que le mode demandé était déjà actif), 1 si l'acquittement est reçu. |
+
+`getKeyCode` rend toujours la main : après une touche d'accent ou de tréma frappée seule, elle renvoie 0 tant que la lettre n'est pas frappée, puis le caractère accentué.
+
+## Licence et remerciements
+
+Copyright 2016-2026 - Eric Sérandour - <https://entropie.org/3615/>
+
+Bibliothèque distribuée sous licence GNU GPL version 3 ou ultérieure (voir [LICENSE](LICENSE)).
+
+Remerciements à BorisFR et iodeo.
+
+## Historique
+
+Dernière version : 12/11/2026.
+
+### 12/11/2026
+
+**Les fonctions ne bloquent plus le programme lorsque le Minitel ne répond pas** (voir [Valeurs de retour et délais d'attente](#valeurs-de-retour-et-délais-dattente)) :
+
+- Délai d'attente maximal d'une seconde dans les fonctions du protocole, qui renvoient alors 0 ; `getCursorX()` et `getCursorY()` renvoient -1.
+- `int searchSpeed(unsigned long timeout = 0)` : nouveau paramètre facultatif pour limiter la durée de la recherche.
+- `getKeyCode` ne bloque plus après une touche d'accent ou de tréma frappée seule, ni sur une séquence incomplète.
+
+Corrections de bugs :
+
+- `getCursorX()`, `getCursorY()` et `connexion()` (sur ESP32 pour cette dernière) se bloquaient si une touche était frappée juste avant la demande.
+- `print` envoyait des codes de contrôle au Minitel pour les caractères UTF-8 non gérés (lettres d'autres langues, emojis) ; ils sont maintenant ignorés.
+- `getKeyCode` : le délai d'attente après la touche Esc dépend de la vitesse (les séquences du clavier étendu pouvaient être coupées à 300 bauds).
+- `changeSpeed` renvoie -1 pour une vitesse non prévue, sans modifier le port série (la liaison était perdue).
+
+**Changement de nom** : la constante `SUPRESSION_CARACTERE` (faute de frappe) devient `SUPPRESSION_CARACTERE`. Les programmes qui utilisent l'ancien nom doivent être mis à jour.
+
+### 25/03/2026
+
+Intégration des modifications proposées par iodeo + Mise à jour des exemples en tenant compte des modifications chez Espressif Systems (version 3.3.7 de esp32 testée) :
+
+- Utilisation de la config SERIAL_7E1 de HardwareSerial (calcul de parité natif des noyaux arduino et esp32)
+- On ne ferme pas la liaison série au moment de changer la vitesse pour l'esp32 car cela parasite l'acquittement dans certains cas. La fermeture reste nécessaire pour les arduinos (ajout macro #else)
+- Renommage de la variable SPEED en _SPEED (conflit avec le noyau)
+- Ajout d'un constructeur pour ESP32 permettant la relocalisation des broches à utiliser pour le port Série. Les paramètres rxPin et txPin sont relatifs à l'esp32 : rxPin va au tx du minitel et txPin va au rx du minitel searchSpeed: index incrementation corrected
+- Add timeout in identificationBytes function
+
+### 12/03/2023
+
+- Correction de deux bugs mineurs dans getKeyCode(bool unicode)
+- Mise à jour de l'exemple `TestCaracteresSpeciaux.ino`
+
+### 11/03/2023
+
+- Suppression de l'exemple Couleurs_3615.ino (car redondant).
+- Mise à jour de tous les autres exemples pour tenir compte des différences entre ce qui concerne l'ATmega 1284P et l'ESP32-WROOM-32E.
+
+### 06/03/2023
+
+Mise à jour des exemples :
+
+- `TestCaracteresSpeciaux.ino`
+- `Tweet_3615.ino`
+- `Couleurs_3615.ino`
+
+### 05/03/2023
+
+Ajout d'une nouvelle fonction :
+
+- `int getNbBytes(unsigned long code)` à utiliser (si besoin) en association avec String getString(unsigned long code) afin de déterminer le nombre d'octets utilisés pour un caractère codé en UTF-8.
+
+Mise à jour des exemples :
+
+- `TestCaracteresSpeciaux.ino`
+- `Couleurs_3615.ino`
+- `Tweet_3615.ino`
+
+### 28/02/2023
+
+- La fonction write(unsigned long code) est renommée writeCode(unsigned long code).
+- J'ai dû changer son nom car avec ce nom un problème est apparu dans l'usage de la bibliothèque Minitel1B_Soft : le Minitel se bloquait. Il s'agissait probablement d'un conflit avec la fonction write de la bibliothèque SoftwareSerial. Par souci de cohérence entre les bibliothèques Minitel1B_Hard et Minitel1B_Soft, j'ai renommé write en writeCode.
+
+### 27/02/2023
+
+- Correction d'un bug dans unsigned long identificationBytes()
+- Mise à jour de l'exemple `TestCaracteresSpeciaux.ino`
+
+### 27/02/2023
+
+Sur proposition de iodeo :
+
+- Correction d'un bug sur le caractère Bêta.
+
+Ajout d'une fonction pour identifier le Minitel :
+
+- `unsigned long identifyDevice()`
+
+### 26/02/2023
+
+- Des exemples où il est question de caractères...
+
+Ajout d'un nouvel exemple :
+
+- `TestCaracteresSpeciaux.ino`
+
+Modification des exemples :
+
+- `Couleurs_3615.ino`
+- `Tweet_3615.ino`
+
+### 26/02/2023
+
+Sur proposition de iodeo :
+
+Pour une meilleure gestion des caractères spéciaux (notamment dans la console série) :
+
+Ajout de nouvelles fonctions :
+
+- `void write(unsigned long code)`
+- `String getString(unsigned long code)`
+- `boolean isVisualisable(unsigned long code)`
+
+Modification de :
+
+- `void print(String chaine)`
+- `unsigned long getKeyCode(bool unicode = true)`
+
+Suppression, car devenues inutiles, de :
+
+- `void printDiacriticChar(unsigned char caractere)`
+- `boolean isDiacritic(unsigned char caractere)`
+
+### 25/06/2022
+
+Sur proposition de iodeo :
+
+- Correction d'un bug dans la fonction byte reset()
+
+### 24/04/2022
+
+- Ajout d'un exemple : Portrait.ino (affichage d'une image)
+
+### 13/03/2022
+
+- Ajout d'un exemple basique : `HelloWorld.ino`
+
+### 21/02/2022
+
+Sur proposition de iodeo :
+
+Ajout d'une option qui permet de désactiver la conversion des caractères en ascii étendue (cela sert en particulier pour la communication avec des services Minitel externes) :
+
+- `unsigned long getKeyCode(bool ascii = true)`
+
+### 08/10/2021
+
+Sur proposition de iodeo :
+
+- Correction de bugs mineurs dans echo(boolean commande) et changeSpeed(int bauds).
+
+Ajout d'une nouvelle fonction liée au modem (équivalent de la touche CONNEXION / FIN) :
+
+- `byte connexion(boolean commande)`
+- Patch pour Arduino-ESP32 core v1.0.6 https://github.com/espressif/arduino-esp32
+
+### 02/07/2021
+
+1 nouvelle fonction :
+
+- `byte reset()`
+
+### 01/07/2021
+
+1 nouvelle fonction :
+
+- `byte statusAiguillage(byte module)`
+
+et mise à jour de :
+
+- `byte pageMode()`
+- `byte scrollMode()`
+- `byte modeMixte()`
+- `byte modeVideotex()`
+- `byte standardTeleinformatique()`
+- `byte standardTeletel()`
+- `byte smallMode()`
+- `byte capitalMode()`
+- `byte extendedKeyboard()`
+- `byte standardKeyboard()`
+- `byte echo(boolean commande)`
+- `byte aiguillage(boolean commande, byte emetteur, byte recepteur)`
+
+### 29/06/2021
+
+5 nouvelles fonctions :
+
+- `void writeWord(word w)`
+- `int modeMixte()`
+- `int modeVideotex()`
+- `int standardTeleinformatique()`
+- `int standardTeletel()`
+
+### 28/06/2021
+
+Modification de la fonction :
+
+- `unsigned long getKeyCode()` pour tenir compte des codes du clavier étendu.
+- Dans le fichier d'entête (.h), ajout de plusieurs #define dans la partie "Clavier".
+
+2 nouvelles fonctions :
+
+- `void echo(boolean commande)`
+- `void aiguillage(boolean commande, byte emetteur, byte recepteur)`
+
+### 11/05/2018
+
+Modification de deux fonctions :
+
+- `void printDiacriticChar(unsigned char caractere)`
+- `boolean isDiacritic(unsigned char caractere)`
+
 pour tenir compte de la remarque de BorisFR sur les caractères diacritiques majuscules.
 
-18/06/2017<br>
-Exemple Tweet_3615.ino<br>
+### 18/06/2017
 
-15/06/2017<br>
-2 nouvelles fonctions qui donnent la position du curseur : <br>
-int getCursorX()<br>
-int getCursorY()<br>
+- Exemple `Tweet_3615.ino`
 
-06/06/2017<br>
-Exemple d'utilisation du clavier et d'affichage d'une image :<br>
-Couleurs_3615.ino<br>
+### 15/06/2017
 
-06/06/2017<br>
-2 nouvelles fonctions graphiques :<br>
-void graphic(byte b, int x, int y)<br>
-void graphic(byte b)<br>
+2 nouvelles fonctions qui donnent la position du curseur :
 
-12/03/2016<br>
-Début de la version HardwareSerial de Minitel1B sur GitHub<br>
+- `int getCursorX()`
+- `int getCursorY()`
+
+### 06/06/2017
+
+Exemple d'utilisation du clavier et d'affichage d'une image :
+
+- `Couleurs_3615.ino`
+
+### 06/06/2017
+
+2 nouvelles fonctions graphiques :
+
+- `void graphic(byte b, int x, int y)`
+- `void graphic(byte b)`
+
+### 12/03/2016
+
+- Début de la version HardwareSerial de Minitel1B sur GitHub

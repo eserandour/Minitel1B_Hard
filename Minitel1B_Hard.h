@@ -185,7 +185,7 @@
 #define DEBUT_INSERTION_CARACTERE  0x1B5B3468
 #define FIN_INSERTION_CARACTERE    0x1B5B346C
 #define TOUCHE_FLECHE_GAUCHE       0x1B5B44
-#define SUPRESSION_CARACTERE       0x1B5B50
+#define SUPPRESSION_CARACTERE      0x1B5B50
 // #define DEL                        0x7F  // Déjà défini plus haut (1.2.6.1)
 // #define CR                         0x0D  // Déjà défini plus haut (1.2.5)
 #define HOME                       0x1B5B4B
@@ -295,7 +295,8 @@ public:
   // à la même vitesse, on perd la liaison.
   int changeSpeed(int bauds);  // A tout moment, un périphérique peut modifier les vitesses d'échange de la prise (vitesses possibles : 300, 1200, 4800 bauds ; également 9600 bauds pour le Minitel 2).
   int currentSpeed();  // Pour connaitre la vitesse d'échange en cours, le Minitel et le périphérique échangeant à la même vitesse.
-  int searchSpeed();  // Pour connaitre la vitesse du Minitel, le Minitel et le périphérique n'échangeant pas nécessairement à la même vitesse.
+  int searchSpeed(unsigned long timeout = 0);  // Pour connaitre la vitesse du Minitel, le Minitel et le périphérique n'échangeant pas nécessairement à la même vitesse.
+                                              // timeout en ms : durée maximale de la recherche (renvoie alors -1). Par défaut (0), on cherche jusqu'à obtenir une réponse du Minitel.
   
   // Séparateurs
   void newScreen();  // Attention ! newScreen réinitialise les attributs de visualisation.
@@ -310,8 +311,8 @@ public:
   void moveCursorDown(int n);  // Curseur vers le bas de n rangées. Arrêt en bas de l'écran.
   void moveCursorUp(int n);  // Curseur vers le haut de n rangées. Arrêt en haut de l'écran.
   void moveCursorReturn(int n);  // Retour du curseur au début de la rangée courante puis curseur vers le bas de n rangées. Arrêt en bas de l'écran.
-  int getCursorX();  // Colonne où se trouve le curseur
-  int getCursorY();  // Rangée où se trouve le curseur
+  int getCursorX();  // Colonne où se trouve le curseur (-1 si le Minitel ne répond pas)
+  int getCursorY();  // Rangée où se trouve le curseur (-1 si le Minitel ne répond pas)
   
   // Effacements, Suppressions, Insertions
   void cancel();  // Remplissage à partir de la position courante du curseur et jusqu'à la fin de la rangée par des espaces du jeu courant ayant l'état courant des attributs. Le position courante du curseur n'est pas déplacée.
@@ -379,10 +380,18 @@ private:
   HardwareSerial& mySerial; 
   
   byte currentSize = GRANDEUR_NORMALE;
+  int currentBauds = 1200;           // Vitesse de la liaison série côté périphérique
+  unsigned long pendingKeyCode = 0;  // Accent, tréma ou cédille reçu du clavier, en attente de sa lettre
   boolean isValidChar(byte index);
   // boolean isDiacritic(unsigned char caractere);  // Obsolète depuis le 26/02/2023
   boolean isVisualisable(unsigned long code);
   void writeBytesP(int n);  // Pn, Pr, Pc
+  
+  // Attentes avec délai maximal (pour ne jamais bloquer le programme)
+  unsigned long sequenceTimeout();  // Délai maximal (en ms) entre deux octets d'une même séquence, selon la vitesse courante
+  boolean waitByte(byte& b, unsigned long timeout);
+  boolean waitTrame(unsigned long attendu, unsigned long masque, unsigned long& trame, unsigned long timeout);
+  unsigned long diacriticKeyCode(unsigned long code, bool unicode);
   
   // Protocole
   void writeBytesPRO(int n);  // PRO1, PRO2 ou PRO3
