@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////
 /*
-   Minitel1B_Hard - Fichier source - Version du 25 mars 2026 à 22h48
+   Minitel1B_Hard - Fichier source - Version du 12 novembre 2026 à 20h37
    Copyright 2016-2026 - Eric Sérandour
    https://entropie.org/3615/
    
