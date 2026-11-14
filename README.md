@@ -8,6 +8,8 @@ Elle permet de piloter un Minitel 1B (ou compatible) par sa prise péri-informat
 
 Documentation utilisée : [Spécifications Techniques d'Utilisation du Minitel 1B](http://543210.free.fr/TV/stum1b.pdf). Les numéros de page cités dans le code renvoient à ce document.
 
+NOUVEAU : Un croquis et un shield Arduino qui transforment le Minitel en petit ordinateur autonome, avec une horloge et reBASIC, un interpréteur BASIC écrit pour l'écran et le clavier du Minitel. Tout est ici : https://github.com/eserandour/rebootMinitel.
+
 ## Sommaire
 
 - [Matériel et environnement](#matériel-et-environnement)
