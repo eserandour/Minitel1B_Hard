@@ -1,4 +1,4 @@
-# Minitel1B_Hard (version du 12 novembre 2026 à 20h37)
+# Minitel1B_Hard (version 2026.11.12 - 20h37)
 
 Bibliothèque Minitel pour Arduino et ESP32, utilisant un port série matériel (`HardwareSerial`).
 
